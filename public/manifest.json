@@ -1,0 +1,9 @@
+{
+  "name": "Party Poäng",
+  "short_name": "PartyPoäng",
+  "description": "Samla poäng på festen!",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#7c3aed",
+  "theme_color": "#7c3aed"
+}
