@@ -23,7 +23,7 @@ export function UserStatusBar({ user, rank, totalUsers, onLogout }: UserStatusBa
           <div className="flex items-center gap-2 min-w-0">
             <span className="text-2xl">🎉</span>
             <h1 className="text-lg font-bold text-white tracking-tight">
-              Party Poäng
+              TUAS BIRTHDAY
             </h1>
           </div>
           <div className="flex items-center gap-1.5">

@@ -49,7 +49,7 @@ export function Onboarding({ onLogin }: OnboardingProps) {
         <div className="text-center space-y-3">
           <p className="text-5xl">🎉</p>
           <h1 className="text-4xl font-black text-white tracking-tight">
-            Party Poäng
+            TUAS BIRTHDAY
           </h1>
           <p className="text-white/50 text-sm">
             Skriv ditt namn för att börja samla poäng!

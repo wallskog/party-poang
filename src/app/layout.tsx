@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Party Poäng",
+  title: "TUAS BIRTHDAY",
   description: "Samla poäng på festen!",
   manifest: "/manifest.json",
 };
@@ -37,7 +37,7 @@ export default function RootLayout({
       lang="sv"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col font-sans">
         {children}
         <Toaster
           position="top-center"
