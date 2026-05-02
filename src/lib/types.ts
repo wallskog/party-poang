@@ -18,6 +18,7 @@ export interface Task {
   points: number;
   icon: string;
   repeatable: boolean;
+  gradient: string;
 }
 
 export interface RankedUser extends User {

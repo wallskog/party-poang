@@ -102,7 +102,7 @@ export function Dashboard({ user, onLogout, onUserUpdate }: DashboardProps) {
   };
 
   return (
-    <div className="min-h-dvh bg-gradient-to-b from-violet-50 to-white dark:from-zinc-950 dark:to-zinc-900">
+    <div className="min-h-dvh bg-gradient-to-b from-[#1a0533] via-[#0f0a1e] to-[#0a0612]">
       <div className="max-w-md mx-auto">
         <UserStatusBar
           user={displayUser}
@@ -111,7 +111,7 @@ export function Dashboard({ user, onLogout, onUserUpdate }: DashboardProps) {
           onLogout={onLogout}
         />
 
-        <div className="px-4 py-5 space-y-5">
+        <div className="px-4 py-5 space-y-6">
           <MiniLeaderboard
             topUsers={topFive}
             currentUserId={user.id}
@@ -120,8 +120,8 @@ export function Dashboard({ user, onLogout, onUserUpdate }: DashboardProps) {
           />
 
           <div>
-            <h2 className="text-lg font-bold mb-1">Uppdrag</h2>
-            <p className="text-xs text-muted-foreground mb-4">
+            <h2 className="text-lg font-bold text-white mb-1">Uppdrag</h2>
+            <p className="text-xs text-white/40 mb-4">
               Tryck på ett uppdrag för att logga poäng
             </p>
             <ActionGrid
@@ -130,6 +130,8 @@ export function Dashboard({ user, onLogout, onUserUpdate }: DashboardProps) {
               onActionLogged={handleActionLogged}
             />
           </div>
+
+          <div className="pb-8" />
         </div>
       </div>
     </div>

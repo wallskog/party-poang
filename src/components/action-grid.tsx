@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Task, Action } from "@/lib/types";
+import { Task } from "@/lib/types";
 import { TASKS } from "@/lib/tasks";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -53,7 +52,6 @@ export function ActionGrid({
     if (!task.repeatable && completedOneTimeTasks.has(task.name)) return;
 
     setLoadingTask(task.name);
-
     onActionLogged(task.name, task.points);
 
     const { error } = await supabase.from("actions").insert({
@@ -91,15 +89,15 @@ export function ActionGrid({
 
   return (
     <div className="space-y-6">
-      <Section title="Upprepbara uppdrag" tasks={repeatableTasks} />
-      <Section title="Engångsuppdrag" tasks={oneTimeTasks} />
+      <Section title="🔄 Upprepbara uppdrag" tasks={repeatableTasks} />
+      <Section title="⚡ Engångsuppdrag" tasks={oneTimeTasks} />
     </div>
   );
 
   function Section({ title, tasks }: { title: string; tasks: Task[] }) {
     return (
       <div>
-        <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 px-1">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-white/40 mb-3 px-1">
           {title}
         </h2>
         <div className="grid grid-cols-2 gap-3">
@@ -111,48 +109,50 @@ export function ActionGrid({
             const isAnimating = animatingTask === task.name;
 
             return (
-              <Card
+              <button
                 key={task.name}
                 onClick={() => handleTaskClick(task)}
+                disabled={isCompleted || !!loadingTask}
                 className={`
-                  relative overflow-hidden cursor-pointer select-none
-                  transition-all duration-200 active:scale-95
+                  relative overflow-hidden rounded-2xl p-4 select-none
+                  transition-all duration-200 active:scale-95 text-left
+                  flex flex-col items-center text-center gap-2.5 cursor-pointer
                   ${
                     isCompleted
-                      ? "opacity-50 bg-muted border-muted cursor-not-allowed"
-                      : "hover:shadow-md hover:-translate-y-0.5 border-border/50"
+                      ? "bg-white/5 opacity-40 cursor-not-allowed"
+                      : `bg-gradient-to-br ${task.gradient} shadow-lg hover:shadow-xl hover:-translate-y-0.5`
                   }
-                  ${isAnimating ? "ring-2 ring-green-400 scale-[1.02]" : ""}
+                  ${isAnimating ? "scale-[1.05] ring-2 ring-white/50" : ""}
                 `}
               >
-                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
-                  {isLoading ? (
-                    <Loader2 className="w-8 h-8 text-violet-500 animate-spin" />
-                  ) : isCompleted ? (
-                    <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
-                      <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
-                    </div>
-                  ) : (
-                    <Icon className="w-8 h-8 text-violet-500" />
-                  )}
-                  <span className="text-xs font-medium leading-tight">
-                    {task.name}
-                  </span>
-                  <span
-                    className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                      isCompleted
-                        ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
-                        : "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300"
-                    }`}
-                  >
-                    {isCompleted ? "Klart ✓" : `+${task.points}p`}
-                  </span>
-                </CardContent>
+                {isLoading ? (
+                  <Loader2 className="w-8 h-8 text-white animate-spin" />
+                ) : isCompleted ? (
+                  <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                    <Check className="w-5 h-5 text-white" />
+                  </div>
+                ) : (
+                  <Icon className="w-8 h-8 text-white drop-shadow-md" />
+                )}
+
+                <span className="text-[11px] font-semibold leading-tight text-white drop-shadow-sm">
+                  {task.name}
+                </span>
+
+                <span
+                  className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                    isCompleted
+                      ? "bg-white/10 text-white/50"
+                      : "bg-black/20 text-white"
+                  }`}
+                >
+                  {isCompleted ? "Klart ✓" : `+${task.points}p`}
+                </span>
 
                 {isAnimating && (
-                  <div className="absolute inset-0 bg-green-400/20 animate-pulse pointer-events-none rounded-xl" />
+                  <div className="absolute inset-0 bg-white/30 animate-pulse pointer-events-none rounded-2xl" />
                 )}
-              </Card>
+              </button>
             );
           })}
         </div>

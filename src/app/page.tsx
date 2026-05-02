@@ -10,8 +10,8 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-dvh flex items-center justify-center bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600">
-        <Loader2 className="w-10 h-10 text-white animate-spin" />
+      <div className="min-h-dvh flex items-center justify-center bg-gradient-to-b from-[#1a0533] via-[#0f0a1e] to-[#0a0612]">
+        <Loader2 className="w-10 h-10 text-violet-400 animate-spin" />
       </div>
     );
   }

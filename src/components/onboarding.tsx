@@ -3,10 +3,9 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/lib/supabase";
 import { User } from "@/lib/types";
-import { PartyPopper, UserPlus, Users } from "lucide-react";
+import { UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
 
 interface OnboardingProps {
@@ -45,21 +44,19 @@ export function Onboarding({ onLogin }: OnboardingProps) {
   };
 
   return (
-    <div className="min-h-dvh flex items-center justify-center bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 p-4">
-      <Card className="w-full max-w-sm border-0 bg-white/10 backdrop-blur-xl shadow-2xl">
-        <CardContent className="pt-8 pb-8 px-6 space-y-6">
-          <div className="text-center space-y-2">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/20 mb-2">
-              <PartyPopper className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold text-white tracking-tight">
-              Party Poäng
-            </h1>
-            <p className="text-white/70 text-sm">
-              Skriv ditt namn för att börja samla poäng!
-            </p>
-          </div>
+    <div className="min-h-dvh flex items-center justify-center bg-gradient-to-b from-[#1a0533] via-[#0f0a1e] to-[#0a0612] p-4">
+      <div className="w-full max-w-sm space-y-8">
+        <div className="text-center space-y-3">
+          <p className="text-5xl">🎉</p>
+          <h1 className="text-4xl font-black text-white tracking-tight">
+            Party Poäng
+          </h1>
+          <p className="text-white/50 text-sm">
+            Skriv ditt namn för att börja samla poäng!
+          </p>
+        </div>
 
+        <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 space-y-4">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -71,13 +68,13 @@ export function Onboarding({ onLogin }: OnboardingProps) {
               placeholder="Ditt namn..."
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="h-12 bg-white/20 border-white/30 text-white placeholder:text-white/50 text-lg focus-visible:ring-white/50"
+              className="h-12 bg-white/10 border-white/10 text-white placeholder:text-white/30 text-lg focus-visible:ring-violet-500/50 rounded-xl"
               autoFocus
             />
             <Button
               type="submit"
               disabled={!name.trim() || submitting}
-              className="w-full h-12 text-lg font-semibold bg-white text-purple-700 hover:bg-white/90 cursor-pointer"
+              className="w-full h-12 text-lg font-bold bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:from-violet-500 hover:to-fuchsia-500 rounded-xl border-0 cursor-pointer"
             >
               <UserPlus className="w-5 h-5 mr-2" />
               {submitting ? "Laddar..." : "Gå med"}
@@ -89,7 +86,7 @@ export function Onboarding({ onLogin }: OnboardingProps) {
               <button
                 type="button"
                 onClick={() => setShowExisting(!showExisting)}
-                className="w-full flex items-center justify-center gap-2 text-white/70 text-sm hover:text-white transition-colors cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 text-white/40 text-sm hover:text-white/70 transition-colors cursor-pointer"
               >
                 <Users className="w-4 h-4" />
                 {showExisting
@@ -106,7 +103,7 @@ export function Onboarding({ onLogin }: OnboardingProps) {
                       size="sm"
                       disabled={submitting}
                       onClick={() => handleSubmit(u.name)}
-                      className="border-white/30 text-white bg-white/10 hover:bg-white/20 truncate cursor-pointer"
+                      className="border-white/10 text-white bg-white/5 hover:bg-white/15 truncate cursor-pointer rounded-lg"
                     >
                       {u.name}
                     </Button>
@@ -115,8 +112,8 @@ export function Onboarding({ onLogin }: OnboardingProps) {
               )}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
