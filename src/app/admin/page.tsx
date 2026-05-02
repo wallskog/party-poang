@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import { User } from "@/lib/types";
+import { User, Action } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,11 +16,22 @@ import {
   X,
   ArrowLeft,
   ShieldCheck,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 
 const ADMIN_PIN = "tua2026";
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just nu";
+  if (mins < 60) return `${mins} min sedan`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h sedan`;
+  return `${Math.floor(hours / 24)}d sedan`;
+}
 
 export default function AdminPage() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -31,6 +42,9 @@ export default function AdminPage() {
   const [editName, setEditName] = useState("");
   const [editScore, setEditScore] = useState(0);
   const [adjustAmount, setAdjustAmount] = useState<Record<string, number>>({});
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [userActions, setUserActions] = useState<Record<string, Action[]>>({});
+  const [loadingActions, setLoadingActions] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async () => {
     const { data } = await supabase
@@ -127,6 +141,63 @@ export default function AdminPage() {
     }
 
     toast.success(`${user.name} borttagen`);
+    if (expandedUserId === user.id) setExpandedUserId(null);
+    setUserActions((prev) => {
+      const next = { ...prev };
+      delete next[user.id];
+      return next;
+    });
+    fetchUsers();
+  };
+
+  const fetchActions = async (userId: string) => {
+    setLoadingActions(userId);
+    const { data } = await supabase
+      .from("actions")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (data) {
+      setUserActions((prev) => ({ ...prev, [userId]: data }));
+    }
+    setLoadingActions(null);
+  };
+
+  const toggleExpand = async (userId: string) => {
+    if (expandedUserId === userId) {
+      setExpandedUserId(null);
+      return;
+    }
+    setExpandedUserId(userId);
+    await fetchActions(userId);
+  };
+
+  const deleteAction = async (action: Action) => {
+    const user = users.find((u) => u.id === action.user_id);
+    if (!confirm(`Ta bort "${action.task_name}" (+${action.points}p) från ${user?.name ?? "användaren"}?`)) return;
+
+    const { error } = await supabase.from("actions").delete().eq("id", action.id);
+
+    if (error) {
+      toast.error("Kunde inte ta bort", { description: error.message });
+      return;
+    }
+
+    // Recalculate user score from remaining actions
+    const { data: remaining } = await supabase
+      .from("actions")
+      .select("points")
+      .eq("user_id", action.user_id);
+
+    const newScore = remaining ? remaining.reduce((sum, a) => sum + a.points, 0) : 0;
+    await supabase
+      .from("users")
+      .update({ score: newScore })
+      .eq("id", action.user_id);
+
+    toast.success(`Tog bort "${action.task_name}" (-${action.points}p)`);
+    await fetchActions(action.user_id);
     fetchUsers();
   };
 
@@ -196,111 +267,177 @@ export default function AdminPage() {
               {users.map((u, i) => {
                 const isEditing = editingId === u.id;
                 const amount = adjustAmount[u.id] ?? 1;
+                const isExpanded = expandedUserId === u.id;
+                const actions = userActions[u.id];
+                const isLoadingThis = loadingActions === u.id;
 
                 return (
                   <div
                     key={u.id}
-                    className="bg-white/5 rounded-xl border border-white/10 p-4 space-y-3"
+                    className="bg-white/5 rounded-xl border border-white/10 overflow-hidden"
                   >
-                    {isEditing ? (
-                      <>
-                        <div className="space-y-2">
-                          <label className="text-[10px] uppercase tracking-wider text-white/30">Namn</label>
-                          <Input
-                            value={editName}
-                            onChange={(e) => setEditName(e.target.value)}
-                            className="h-10 bg-white/10 border-white/10 text-white rounded-lg text-sm"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] uppercase tracking-wider text-white/30">Poäng</label>
-                          <Input
-                            type="number"
-                            value={editScore}
-                            onChange={(e) => setEditScore(parseInt(e.target.value) || 0)}
-                            className="h-10 bg-white/10 border-white/10 text-white rounded-lg text-sm"
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => saveEdit(u)}
-                            className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg cursor-pointer"
-                          >
-                            <Check className="w-4 h-4 mr-1" /> Spara
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={cancelEdit}
-                            className="border-white/10 text-white bg-white/5 hover:bg-white/10 rounded-lg cursor-pointer"
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <span className="text-xs font-bold text-white/30 w-5 text-center">
-                              {i + 1}.
-                            </span>
-                            <span className="text-sm font-semibold text-white truncate">
-                              {u.name}
-                            </span>
+                    <div className="p-4 space-y-3">
+                      {isEditing ? (
+                        <>
+                          <div className="space-y-2">
+                            <label className="text-[10px] uppercase tracking-wider text-white/30">Namn</label>
+                            <Input
+                              value={editName}
+                              onChange={(e) => setEditName(e.target.value)}
+                              className="h-10 bg-white/10 border-white/10 text-white rounded-lg text-sm"
+                            />
                           </div>
-                          <span className="text-lg font-black text-white tabular-nums">
-                            {u.score}p
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-1 flex-1">
-                            <Button
-                              size="sm"
-                              onClick={() => adjustScore(u.id, -amount)}
-                              className="h-8 w-8 p-0 bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded-lg cursor-pointer"
-                            >
-                              <Minus className="w-3.5 h-3.5" />
-                            </Button>
+                          <div className="space-y-2">
+                            <label className="text-[10px] uppercase tracking-wider text-white/30">Poäng</label>
                             <Input
                               type="number"
-                              min={1}
-                              value={amount}
-                              onChange={(e) =>
-                                setAdjustAmount((prev) => ({
-                                  ...prev,
-                                  [u.id]: Math.max(1, parseInt(e.target.value) || 1),
-                                }))
-                              }
-                              className="h-8 w-14 text-center bg-white/5 border-white/10 text-white text-sm rounded-lg"
+                              value={editScore}
+                              onChange={(e) => setEditScore(parseInt(e.target.value) || 0)}
+                              className="h-10 bg-white/10 border-white/10 text-white rounded-lg text-sm"
                             />
+                          </div>
+                          <div className="flex gap-2">
                             <Button
                               size="sm"
-                              onClick={() => adjustScore(u.id, amount)}
-                              className="h-8 w-8 p-0 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 rounded-lg cursor-pointer"
+                              onClick={() => saveEdit(u)}
+                              className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg cursor-pointer"
                             >
-                              <Plus className="w-3.5 h-3.5" />
+                              <Check className="w-4 h-4 mr-1" /> Spara
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={cancelEdit}
+                              className="border-white/10 text-white bg-white/5 hover:bg-white/10 rounded-lg cursor-pointer"
+                            >
+                              <X className="w-4 h-4" />
                             </Button>
                           </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <span className="text-xs font-bold text-white/30 w-5 text-center">
+                                {i + 1}.
+                              </span>
+                              <span className="text-sm font-semibold text-white truncate">
+                                {u.name}
+                              </span>
+                            </div>
+                            <span className="text-lg font-black text-white tabular-nums">
+                              {u.score}p
+                            </span>
+                          </div>
 
-                          <Button
-                            size="sm"
-                            onClick={() => startEdit(u)}
-                            className="h-8 w-8 p-0 bg-white/5 hover:bg-white/15 text-white/50 rounded-lg cursor-pointer"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => deleteUser(u)}
-                            className="h-8 w-8 p-0 bg-white/5 hover:bg-red-600/30 text-white/30 hover:text-red-400 rounded-lg cursor-pointer"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1 flex-1">
+                              <Button
+                                size="sm"
+                                onClick={() => adjustScore(u.id, -amount)}
+                                className="h-8 w-8 p-0 bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded-lg cursor-pointer"
+                              >
+                                <Minus className="w-3.5 h-3.5" />
+                              </Button>
+                              <Input
+                                type="number"
+                                min={1}
+                                value={amount}
+                                onChange={(e) =>
+                                  setAdjustAmount((prev) => ({
+                                    ...prev,
+                                    [u.id]: Math.max(1, parseInt(e.target.value) || 1),
+                                  }))
+                                }
+                                className="h-8 w-14 text-center bg-white/5 border-white/10 text-white text-sm rounded-lg"
+                              />
+                              <Button
+                                size="sm"
+                                onClick={() => adjustScore(u.id, amount)}
+                                className="h-8 w-8 p-0 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 rounded-lg cursor-pointer"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+
+                            <Button
+                              size="sm"
+                              onClick={() => toggleExpand(u.id)}
+                              className={`h-8 w-8 p-0 rounded-lg cursor-pointer transition-colors ${
+                                isExpanded
+                                  ? "bg-violet-600/30 text-violet-300"
+                                  : "bg-white/5 hover:bg-white/15 text-white/50"
+                              }`}
+                            >
+                              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => startEdit(u)}
+                              className="h-8 w-8 p-0 bg-white/5 hover:bg-white/15 text-white/50 rounded-lg cursor-pointer"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => deleteUser(u)}
+                              className="h-8 w-8 p-0 bg-white/5 hover:bg-red-600/30 text-white/30 hover:text-red-400 rounded-lg cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {isExpanded && (
+                      <div className="px-4 pb-4 border-t border-white/5">
+                        <div className="pt-3">
+                          {isLoadingThis ? (
+                            <div className="flex justify-center py-3">
+                              <Loader2 className="w-4 h-4 text-white/30 animate-spin" />
+                            </div>
+                          ) : !actions || actions.length === 0 ? (
+                            <p className="text-xs text-white/30 py-2">
+                              Inga loggade uppdrag.
+                            </p>
+                          ) : (
+                            <div className="space-y-1">
+                              {actions.map((a) => (
+                                <div
+                                  key={a.id}
+                                  className="flex items-center gap-2 group rounded-lg hover:bg-white/5 px-2 py-1.5 -mx-2"
+                                >
+                                  <span className="text-xs text-white/50 truncate flex-1">
+                                    {a.task_name}
+                                  </span>
+                                  <span className="text-[10px] text-white/20 flex-shrink-0">
+                                    {timeAgo(a.created_at)}
+                                  </span>
+                                  <span className="text-xs font-bold text-emerald-400 tabular-nums flex-shrink-0 w-8 text-right">
+                                    +{a.points}p
+                                  </span>
+                                  <button
+                                    onClick={() => deleteAction(a)}
+                                    className="p-1 rounded-md opacity-0 group-hover:opacity-100 hover:bg-red-600/30 text-white/20 hover:text-red-400 transition-all cursor-pointer flex-shrink-0"
+                                    title="Ta bort"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ))}
+                              <div className="flex items-center justify-between pt-2 border-t border-white/5 mt-2 px-2 -mx-2">
+                                <span className="text-[10px] text-white/30 uppercase tracking-wider">
+                                  {actions.length} uppdrag
+                                </span>
+                                <span className="text-xs font-bold text-white/50 tabular-nums">
+                                  = {actions.reduce((s, a) => s + a.points, 0)}p
+                                </span>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </>
+                      </div>
                     )}
                   </div>
                 );
